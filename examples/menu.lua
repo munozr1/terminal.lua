@@ -78,11 +78,11 @@ local function _readKey()
 end
 
 local function _handleInput()
-    if M.choices == 0 then
+    if #M.choices == 0 then
         return nil, "choices empty"
     end
 
-    local max = M.choices
+    local max = #M.choices
     local min = 1
     local idx = 1                                    -- Index of the currently highlighted option.
     t.cursor.position.up(max+1)                         -- Offset cursor for initial display.
