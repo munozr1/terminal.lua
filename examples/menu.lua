@@ -1,5 +1,5 @@
 local t = require "terminal"
---local Sequence = require("terminal.sequence")
+local Sequence = require("terminal.sequence")
 
 -- Key bindings for arrow keys, 'j', 'k', and Enter.
 local key_names = {
@@ -62,22 +62,20 @@ function IMenu:handleInput()
     local idx = 1                                    -- Index of the currently highlighted option.
     t.cursor.position.up(max+1)                         -- Offset cursor for initial display.
     self:select(self._choices[1])                   -- Highlight the first option.
-    t.cursor.position.up(1)                         -- Offset cursor for initial display.
+    --t.cursor.position.up(1)                         -- Offset cursor for initial display.
     while true do
         local  _, keyName = self:readKey()
 
         if keyName == "up" and idx > min then
             self:unselect(self._choices[idx])
-            t.cursor.position.up(2)                     -- Move cursor up.
-            idx = idx - 1                                -- Decrement option index.
+            t.cursor.position.up(1)
+            idx = idx - 1
             self:select(self._choices[idx])
-            t.cursor.position.up(1)                     -- Move cursor up.
         elseif keyName == "down" and idx < max then
             self:unselect(self._choices[idx])
-            --t.cursor.position.down(1)                   -- Move cursor down.
-            idx = idx + 1                                -- Increment option index.
+            t.cursor.position.down(1)
+            idx = idx + 1
             self:select(self._choices[idx])
-            t.cursor.position.up(1)                   -- Move cursor down.
         elseif keyName == "enter" then
             self.selected = idx                            -- Set the selected option index.
             t.cursor.position.down(max - idx+1)             -- Move cursor past the options.
@@ -89,18 +87,23 @@ end
 -- Displays an unselected option.
 -- @param string : the option name you want to unselect
 function IMenu:unselect(opt)
-    t.text.stack.push{ -- Dim the text color.
+    t.output.write(Sequence(function() return t.text.stack.push_seq{ -- Dim the text color.
         fg = "white",
         brightness = "dim",
-    }
-    t.output.write(pipe, "    ", circle, " ", opt, "\n")
-    t.text.stack.pop() -- Restore text color.
+    }end,
+    pipe, "    ", circle, " ", opt, "\n",
+    t.text.stack.pop_seq, -- Restore text color.
+    t.cursor.position.up_seq(1)))
+
 end
 
 -- Displays a selected option.
 -- @param string : the option name you want to select
 function IMenu:select(opt)
-    t.output.write(pipe, "    ", dot, " ", opt, "\n")
+    t.output.write(Sequence(
+    pipe, "    ", dot, " ", opt, "\n",
+    t.cursor.position.up_seq(1)
+    ))
 end
 
 -- Runs the prompt and returns the selected option index.
