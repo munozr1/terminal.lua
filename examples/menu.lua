@@ -10,17 +10,16 @@ local key_names = {
   ["\r"] = "enter",  -- Carriage return (Enter)
   ["\n"] = "enter",  -- Newline (Enter)
 }
-
 local greenDiamond = "◇"
 local pipe         = "│"
+local hook         = "└"
 local circle       = "○"
 local dot          = "●"
-
 local IMenu = {}
 
 -- Initialize choices, cursor position, and selected option.
 IMenu._choices = {} -- Array of selectable options (strings).
-IMenu.selected = nil -- The option the user selects
+IMenu.selected = 1 -- The option the user selects
 
 function IMenu:__template()
     local menu = greenDiamond .. "  Select an option:\n"
@@ -70,11 +69,13 @@ function IMenu:handleInput()
             self:unselect(self._choices[idx])
             t.cursor.position.up(1)
             idx = idx - 1
+            self.selected = idx
             self:select(self._choices[idx])
         elseif keyName == "down" and idx < max then
             self:unselect(self._choices[idx])
             t.cursor.position.down(1)
             idx = idx + 1
+            self.selected = idx
             self:select(self._choices[idx])
         elseif keyName == "enter" then
             self.selected = idx                            -- Set the selected option index.
@@ -106,19 +107,49 @@ function IMenu:select(opt)
     ))
 end
 
+function IMenu:exitSequence()
+  t.output.write(Sequence(
+  t.cursor.position.down_seq(#self._choices - self.selected),
+  pipe.."\n",
+  t.cursor.position.down_seq(1),
+  hook,
+  function() return t.text.stack.push_seq{ -- Dim the text color.
+        fg = "red",
+        brightness = "bright",
+    }end,
+    " operation cancelled", "\n",
+    t.text.stack.pop_seq
+    ))
+
+end
+
+
 -- Runs the prompt and returns the selected option index.
 function IMenu:run()
     t.initialize()
     t.cursor.visible.set(false)                     -- Hide the cursor.
     self:__template()
-    self:handleInput()                               -- Handle user input.
+    local ok, selected = pcall(self.handleInput, self)
     t.output.write("\n")
     t.cursor.visible.set(true)                       -- Restore cursor visibility.
     t.shutdown()
-    return self.selected                              -- Return selected option index.
+
+    if not ok then
+      IMenu:exitSequence()
+      return nil
+    end
+
+    return selected
 end
 
 IMenu:choices({"Typescript", "Typescript + swc", "Javascript", "Javascript + swc"})
-print("selected: "..IMenu._choices[IMenu:run()])
+
+local selected_index = IMenu:run()
+
+if selected_index then
+  print("selected: " .. IMenu._choices[selected_index])
+else
+  print("Error or cancellation.")
+end
 
 return IMenu
