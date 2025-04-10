@@ -47,6 +47,12 @@ local IMenu = {}
 IMenu.__index = IMenu
 
 
+local function exitSequence()
+  -- This method is called when garbage collected
+  -- recover the cursor
+  t.cursor.visible.stack.pop()
+end
+
 
 function IMenu:__call()
   -- This method is called when calling on an INSTANCE
@@ -83,6 +89,16 @@ setmetatable(IMenu, {
     self.selected = default
     self.prompt = prompt
     self.cancellable = not not options.cancellable
+
+    -- Define the instance metatable including __gc
+    local instance_mt = {
+      __index = cls,
+      __gc = exitSequence,
+      __call = IMenu.run -- Add __call back to the instance metatable
+    }
+    -- Set the instance metatable
+    setmetatable(self, instance_mt)
+
     self:template() -- build the template
     return self
   end,
