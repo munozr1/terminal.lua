@@ -122,8 +122,7 @@ do
   -- @tparam[opt=io.stderr] filehandle opts.filehandle the stream to use for output
   -- @tparam[opt=sys.sleep] function opts.bsleep the blocking sleep function to use.
   -- This should never be set to a yielding sleep function! This function
-  -- will be used by the `terminal.write` and `terminal.print` to prevent buffer-overflows and
-  -- truncation when writing to the terminal. And by `cursor.position.get` when reading the cursor position.
+  -- will be used by `cursor.position.get` when reading the cursor position.
   -- @tparam[opt=sys.sleep] function opts.sleep the default sleep function to use for `readansi`.
   -- In an async application (coroutines), this should be a yielding sleep function, eg. `copas.pause`.
   -- @return true
@@ -142,6 +141,8 @@ do
 
     M._asleep = opts.sleep or sys.sleep
     assert(type(M._asleep) == "function", "invalid opts.sleep function, expected a function, got " .. type(opts.sleep))
+
+    sys.detachfds()
 
     termbackup = sys.termbackup()
     if opts.displaybackup then
@@ -208,8 +209,8 @@ end
 -- When an error occurs, and the application exits, the terminal might not be properly shut down.
 -- This function wraps a function in calls to `initialize` and `shutdown`, ensuring the terminal is properly shut down.
 -- If an error is caught, it first shutsdown the terminal and then rethrows the error.
--- @tparam[opt] table opts options table, to pass to `initialize`.
 -- @tparam function main the function to wrap
+-- @tparam[opt] table opts options table, to pass to `initialize`.
 -- @treturn function wrapped function
 -- @usage
 -- local function main(param1, param2)
