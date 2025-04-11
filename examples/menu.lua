@@ -90,17 +90,33 @@ setmetatable(IMenu, {
     self.prompt = prompt
     self.cancellable = not not options.cancellable
 
-    -- Define the instance metatable including __gc
-    local instance_mt = {
-      __index = cls,
-      __gc = exitSequence,
-      __call = IMenu.run -- Add __call back to the instance metatable
-    }
-    -- Set the instance metatable
-    setmetatable(self, instance_mt)
-
     self:template() -- build the template
-    return self
+
+    -- Handle garbage collection with backward compatibility
+    local major, minor = _VERSION:match("Lua (%d)%.(%d)")
+    major, minor = tonumber(major), tonumber(minor)
+    print(major, minor)
+
+    if major >= 5 and minor >= 4 then
+      -- Lua 5.4+ : Use standard __gc in metatable
+      local instance_mt = {
+        __index = cls,
+        __gc = exitSequence,
+        __call = function(instance, ...) return instance:run(...) end -- Ensure instance:run() is called
+      }
+      setmetatable(self, instance_mt)
+      return self
+    else
+      -- Older Lua versions: Use newproxy trick
+      local proxy = newproxy(true)
+      local proxy_mt = getmetatable(proxy)
+      proxy_mt.__gc = exitSequence
+      proxy_mt.__call = function(_, ...) return self:run(...) end -- Call original self:run()
+      proxy_mt.__index = self -- Delegate field access to original self
+      -- Note: __newindex etc. could be added if needed for modification
+      return proxy
+    end
+
   end,
 })
 
